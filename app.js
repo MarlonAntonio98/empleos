@@ -4,7 +4,7 @@ if (window.top !== window.self) { document.documentElement.classList.add('framed
 
 const $ = s => document.querySelector(s);
 const main = $('#main'), ov = $('#overlay');
-const APP_VERSION = 5;
+const APP_VERSION = 6;
 const slug = t => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const enc = t => encodeURIComponent(t);
 const SITES = [
@@ -83,17 +83,17 @@ function topBar(){ const n = dueSoon();
   <div class="seg" role="tablist"><button role="tab" class="${tab==='search'?'on':''}" data-tab="search">Buscar</button><button role="tab" class="${tab==='jobs'?'on':''}" data-tab="jobs">Mis postulaciones${n ? ` <span class="count">${n}</span>` : ''}</button></div>`; }
 function viewSearch(){ let h = topBar();
   h += `<div class="search-box big">${ic('search',20)}<input id="q" type="search" placeholder="¿Qué trabajo buscas?" value="${esc(query)}" aria-label="Qué trabajo buscas" enterkeyhint="search" ${NO_SPELL}></div><div id="dyn">${searchDyn()}</div>`;
-  h += `<div class="tip"><b>¿Encontraste una oferta que te interesa?</b><span>Ábrela en el navegador, toca «Compartir» y elige «Empleos». Se guarda en «Mis postulaciones» para darle seguimiento.</span></div>`;
   return h; }
+
+const LINK_COLORS = ['#B07BE8','#4AC1C9','#E8894A','#5FD3A0','#E86AA0','#C9A24A','#6AB0E8','#E8C24A','#9AA3AD','#8C9CE8','#E86A7E','#7BC86C'];
 function searchDyn(){ const q = query.trim(); let h = '';
   const chips = searches.map(s => `<button class="chip ${s === q ? 'on' : ''}" data-q="${esc(s)}">${esc(s)}</button>`).join('');
   const star = q && !searches.includes(q) ? `<button class="chip star" data-act="saveSearch">${ic('star',14)} Guardar «${esc(q)}»</button>` : '';
-  h += chips || star ? `<div class="chips saved">${star}${chips}</div>` : `<p class="fine">Escribe un puesto, por ejemplo «maestro de inglés». Puedes guardarlo para tenerlo a un toque.</p>`;
-  h += `<h2 class="section">${q ? `Buscar «${esc(q)}» en` : 'Escribe arriba y elige dónde buscar'}</h2><div class="sites">${SITES.map(s => q ? `<a class="site" href="${esc(s.url(q))}" target="_blank" rel="noopener noreferrer" data-c="${s.c}"><span class="site-ic">${esc(s.n.charAt(0))}</span><b>${esc(s.n)}</b></a>` : `<button class="site off" data-site="${s.k}" data-c="${s.c}"><span class="site-ic">${esc(s.n.charAt(0))}</span><b>${esc(s.n)}</b></button>`).join('')}</div>`;
-  h += `<p class="fine">Se abre la página con tu búsqueda ya escrita. Si tienes la app de LinkedIn o Facebook, se abre ahí.</p>`;
-  const LINK_COLORS = ['#B07BE8','#4AC1C9','#E8894A','#5FD3A0','#E86AA0','#C9A24A','#6AB0E8','#E8C24A','#9AA3AD','#8C9CE8','#E86A7E','#7BC86C'];
-  h += `<h2 class="section">Accesos directos</h2>${links.length ? `<div class="sites">${links.map((l, i) => `<a class="site" href="${esc(l.u)}" target="_blank" rel="noopener noreferrer" data-c="${/facebook\.com\/groups/.test(l.u) ? '#7B8FE8' : LINK_COLORS[i % LINK_COLORS.length]}"><span class="site-ic">${esc(l.n.charAt(0).toUpperCase())}</span><b>${esc(l.n)}</b></a>`).join('')}</div>` : '<p class="fine">Agrega tus páginas o grupos favoritos en Ajustes.</p>'}<p class="fine">${query.trim() ? `Al abrir cualquier página, «${esc(query.trim())}» se copia solo para que lo pegues en su buscador.` : 'Si escribes arriba lo que buscas, se copia solo al abrir cualquier página, para que lo pegues en su buscador.'}</p><button class="link-btn edit-links" data-act="settings">Editar accesos directos</button>`;
-  return h; }
+  if (chips || star) h += `<div class="chips saved">${star}${chips}</div>`;
+  const tile = (href, c, n) => `<a class="site" href="${esc(href)}" target="_blank" rel="noopener noreferrer" data-c="${c}"><span class="site-ic">${esc(n.charAt(0).toUpperCase())}</span><b>${esc(n)}</b></a>`;
+  h += `<div class="sites all">${SITES.map(s => q ? tile(s.url(q), s.c, s.n) : `<button class="site off" data-site="${s.k}" data-c="${s.c}"><span class="site-ic">${esc(s.n.charAt(0))}</span><b>${esc(s.n)}</b></button>`).join('')}${links.map((l, i) => tile(l.u, /facebook\.com\/groups/.test(l.u) ? '#7B8FE8' : LINK_COLORS[i % LINK_COLORS.length], l.n)).join('')}</div>`;
+  return h + `<button class="link-btn edit-links" data-act="settings">Editar accesos directos</button>`; }
+
 function paintDyn(){ const d = $('#dyn'); if (d){ d.innerHTML = searchDyn(); paint(); } }
 function jobRow(j){ const s = ST[j.status], next = j.next && j.status !== 'closed' ? (daysTo(j.next) < 0 ? 'Seguimiento pendiente' : daysTo(j.next) === 0 ? 'Seguimiento hoy' : `Seguimiento ${fmtShort(j.next)}`) : '';
   return `<button class="job" data-open="${esc(j.id)}"><span class="st-dot" data-c="${s.c}"></span><span class="job-main"><b>${esc(j.title)}</b><small>${esc([j.company, siteOf(j.url)].filter(Boolean).join(', '))}</small>${next ? `<small class="${daysTo(j.next) <= 0 ? 'due' : ''}">${next}</small>` : ''}</span><span class="st-tag" data-c="${s.c}">${s.n}</span></button>`; }
