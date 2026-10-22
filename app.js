@@ -4,7 +4,7 @@ if (window.top !== window.self) { document.documentElement.classList.add('framed
 
 const $ = s => document.querySelector(s);
 const main = $('#main'), ov = $('#overlay');
-const APP_VERSION = 4;
+const APP_VERSION = 5;
 const slug = t => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const enc = t => encodeURIComponent(t);
 const SITES = [
@@ -16,10 +16,10 @@ const SITES = [
   {k:'buscojobs', n:'BuscoJobs', c:'#C9A0E8', url:q => `https://www.buscojobs.com.sv/ofertas/${slug(q)}_`},
   {k:'facebook', n:'Facebook (recientes)', c:'#7B8FE8', url:q => `https://www.facebook.com/search/top?q=${enc(q)}&filters=eyJyZWNlbnRfcG9zdHM6MCI6IntcIm5hbWVcIjpcInJlY2VudF9wb3N0c1wiLFwiYXJnc1wiOlwiXCJ9In0%3D`}];
 const DEFAULT_LINKS = [
-  {n:'Ministerio de Trabajo (Oportunidades)', u:'https://oportunidades.mtps.gob.sv/home'},
-  {n:'INCAF (Oportunidades)', u:'https://www.incaf.gob.sv/oportunidades/'},
-  {n:'Tuchance (empleos permanentes)', u:'https://www.tuchance.org.sv/chances/empleos-permanentes'},
-  {n:'Cámara de Comercio (PROmuévete)', u:'https://app.camarasal.com/offers_available'},
+  {n:'Ministerio de Trabajo', u:'https://oportunidades.mtps.gob.sv/home'},
+  {n:'INCAF', u:'https://www.incaf.gob.sv/oportunidades/'},
+  {n:'Tuchance', u:'https://www.tuchance.org.sv/chances/empleos-permanentes'},
+  {n:'Cámara de Comercio', u:'https://app.camarasal.com/offers_available'},
   {n:'Crecer con Empleo', u:'https://app.crecerconempleo.com'},
   {n:'Mi Futuro Empleo', u:'https://sv.mifuturoempleo.com'},
   {n:'Saplic', u:'https://saplic.com/sv/busqueda-ofertas-empleo'},
@@ -58,7 +58,7 @@ function clean(j){ if (!j || !ID_RE.test(j.id)) return null; const title = str(j
   return {id:j.id, title, company:str(j.company, 100).trim(), url:safeUrl(j.url || ''), status:ST[j.status] ? j.status : 'saved', applied:DATE_RE.test(j.applied || '') ? j.applied : '', next:DATE_RE.test(j.next || '') ? j.next : '', nextNote:str(j.nextNote, 120), note:str(j.note, 2000), salary:str(j.salary, 60), created:+j.created || Date.now(), updated:+j.updated || Date.now()}; }
 let jobs = [], searches = [], links = DEFAULT_LINKS.map(l => Object.assign({}, l)), query = '', view = {name:'search'}, hist = [], tab = 'search', filter = 'active', draft = null, installEvt = null;
 async function saveJob(j){ j.updated = Date.now(); await DB.put('jobs', j); const k = jobs.findIndex(x => x.id === j.id); k < 0 ? jobs.push(j) : jobs[k] = j; }
-const saveLinks = () => DB.put('meta', {k:'links', v:links, ver:4}).catch(() => {});
+const saveLinks = () => DB.put('meta', {k:'links', v:links, ver:5}).catch(() => {});
 const saveSearches = () => DB.put('meta', {k:'searches', v:searches}).catch(() => {});
 
 /* ---------- Superposiciones y botón atrás ---------- */
@@ -83,7 +83,6 @@ function topBar(){ const n = dueSoon();
   <div class="seg" role="tablist"><button role="tab" class="${tab==='search'?'on':''}" data-tab="search">Buscar</button><button role="tab" class="${tab==='jobs'?'on':''}" data-tab="jobs">Mis postulaciones${n ? ` <span class="count">${n}</span>` : ''}</button></div>`; }
 function viewSearch(){ let h = topBar();
   h += `<div class="search-box big">${ic('search',20)}<input id="q" type="search" placeholder="¿Qué trabajo buscas?" value="${esc(query)}" aria-label="Qué trabajo buscas" enterkeyhint="search" ${NO_SPELL}></div><div id="dyn">${searchDyn()}</div>`;
-  h += `<h2 class="section">Accesos directos</h2><div class="box links">${links.map((l, i) => `<a class="link-row" href="${esc(l.u)}" target="_blank" rel="noopener noreferrer"><span class="site-ic sm" data-c="${/facebook/.test(l.u) ? '#7B8FE8' : '#C9A0E8'}">${esc(l.n.charAt(0).toUpperCase())}</span><b>${esc(l.n)}</b>${ic('ext',16)}</a>`).join('') || '<p class="fine">Agrega tus páginas o grupos favoritos en Ajustes.</p>'}</div><button class="link-btn edit-links" data-act="settings">Editar accesos directos</button>`;
   h += `<div class="tip"><b>¿Encontraste una oferta que te interesa?</b><span>Ábrela en el navegador, toca «Compartir» y elige «Empleos». Se guarda en «Mis postulaciones» para darle seguimiento.</span></div>`;
   return h; }
 function searchDyn(){ const q = query.trim(); let h = '';
@@ -91,7 +90,10 @@ function searchDyn(){ const q = query.trim(); let h = '';
   const star = q && !searches.includes(q) ? `<button class="chip star" data-act="saveSearch">${ic('star',14)} Guardar «${esc(q)}»</button>` : '';
   h += chips || star ? `<div class="chips saved">${star}${chips}</div>` : `<p class="fine">Escribe un puesto, por ejemplo «maestro de inglés». Puedes guardarlo para tenerlo a un toque.</p>`;
   h += `<h2 class="section">${q ? `Buscar «${esc(q)}» en` : 'Escribe arriba y elige dónde buscar'}</h2><div class="sites">${SITES.map(s => q ? `<a class="site" href="${esc(s.url(q))}" target="_blank" rel="noopener noreferrer" data-c="${s.c}"><span class="site-ic">${esc(s.n.charAt(0))}</span><b>${esc(s.n)}</b></a>` : `<button class="site off" data-site="${s.k}" data-c="${s.c}"><span class="site-ic">${esc(s.n.charAt(0))}</span><b>${esc(s.n)}</b></button>`).join('')}</div>`;
-  return h + `<p class="fine">Se abre la página con tu búsqueda ya escrita. Si tienes la app de LinkedIn o Facebook, se abre ahí.</p>`; }
+  h += `<p class="fine">Se abre la página con tu búsqueda ya escrita. Si tienes la app de LinkedIn o Facebook, se abre ahí.</p>`;
+  const LINK_COLORS = ['#B07BE8','#4AC1C9','#E8894A','#5FD3A0','#E86AA0','#C9A24A','#6AB0E8','#E8C24A','#9AA3AD','#8C9CE8','#E86A7E','#7BC86C'];
+  h += `<h2 class="section">Accesos directos</h2>${links.length ? `<div class="sites">${links.map((l, i) => `<a class="site" href="${esc(l.u)}" target="_blank" rel="noopener noreferrer" data-c="${/facebook\.com\/groups/.test(l.u) ? '#7B8FE8' : LINK_COLORS[i % LINK_COLORS.length]}"><span class="site-ic">${esc(l.n.charAt(0).toUpperCase())}</span><b>${esc(l.n)}</b></a>`).join('')}</div>` : '<p class="fine">Agrega tus páginas o grupos favoritos en Ajustes.</p>'}<p class="fine">${query.trim() ? `Al abrir cualquier página, «${esc(query.trim())}» se copia solo para que lo pegues en su buscador.` : 'Si escribes arriba lo que buscas, se copia solo al abrir cualquier página, para que lo pegues en su buscador.'}</p><button class="link-btn edit-links" data-act="settings">Editar accesos directos</button>`;
+  return h; }
 function paintDyn(){ const d = $('#dyn'); if (d){ d.innerHTML = searchDyn(); paint(); } }
 function jobRow(j){ const s = ST[j.status], next = j.next && j.status !== 'closed' ? (daysTo(j.next) < 0 ? 'Seguimiento pendiente' : daysTo(j.next) === 0 ? 'Seguimiento hoy' : `Seguimiento ${fmtShort(j.next)}`) : '';
   return `<button class="job" data-open="${esc(j.id)}"><span class="st-dot" data-c="${s.c}"></span><span class="job-main"><b>${esc(j.title)}</b><small>${esc([j.company, siteOf(j.url)].filter(Boolean).join(', '))}</small>${next ? `<small class="${daysTo(j.next) <= 0 ? 'due' : ''}">${next}</small>` : ''}</span><span class="st-tag" data-c="${s.c}">${s.n}</span></button>`; }
@@ -168,6 +170,9 @@ function sharedDraft(){ const q = new URLSearchParams(location.search); if (!q.h
   return newDraft({title:title.slice(0, 160), url}); }
 
 /* ---------- Eventos ---------- */
+document.addEventListener('click', e => { const a = e.target.closest('a.site, a.link-row'), q = query.trim(); if (!a || !q) return;
+  try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(q).catch(() => {}); } catch(err){}
+  toast(`«${q}» copiado`); }, true);
 document.addEventListener('click', async e => {
   const t = e.target.closest('[data-act],[data-tab],[data-q],[data-site],[data-open],[data-filter],[data-status],[data-nd],[data-delq],[data-link],[data-editlink]'); if (!t) return; const ds = t.dataset;
   if (ds.tab){ tab = ds.tab; view = {name:tab}; render(); window.scrollTo(0,0); return; }
@@ -195,6 +200,8 @@ window.addEventListener('appinstalled', () => { installEvt = null; toast('Empleo
   try { jobs = (await DB.all('jobs')).map(clean).filter(Boolean); } catch(e){ jobs = []; }
   try { const l = await DB.get('meta', 'links'); if (l && Array.isArray(l.v)){ links = l.v.filter(x => x && typeof x.n === 'string' && safeUrl(x.u)).map(x => ({n:x.n.slice(0, 60), u:safeUrl(x.u)})).slice(0, 30);
     // páginas nuevas de la versión 4: se suman a tus accesos directos sin tocar los que ya editaste
+    const OLD = {'Ministerio de Trabajo (Oportunidades)':'Ministerio de Trabajo', 'INCAF (Oportunidades)':'INCAF', 'Tuchance (empleos permanentes)':'Tuchance', 'Cámara de Comercio (PROmuévete)':'Cámara de Comercio'};
+    if ((l.ver || 1) < 5){ links.forEach(x => { if (OLD[x.n]) x.n = OLD[x.n]; }); saveLinks(); }
     if ((l.ver || 1) < 4){ const known = new Set(links.map(x => x.u)); DEFAULT_LINKS.forEach(d => { if (!known.has(d.u)) links.push(Object.assign({}, d)); }); saveLinks(); } } } catch(e){}
   try { const s = await DB.get('meta', 'searches'); if (s && Array.isArray(s.v)) searches = s.v.filter(x => typeof x === 'string').slice(0, 12); } catch(e){}
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});

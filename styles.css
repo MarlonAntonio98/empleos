@@ -305,3 +305,7 @@ a.btn{text-decoration:none}
 .sites .site:last-child:nth-child(odd){grid-column:1/-1}
 .site{grid-template-columns:34px minmax(0,1fr)}.site>svg{display:none}.site .site-ic{width:34px;height:34px;border-radius:10px;font-size:15px}.site b{font-size:14.5px;overflow:visible;white-space:normal}
 a.site,a.link-row{text-decoration:none}
+.sites + .fine{margin-top:4px}
+.sites .site b{line-height:1.25}
+.sites .site b{overflow-wrap:break-word;hyphens:auto}
+.site{grid-template-columns:30px minmax(0,1fr);gap:9px}.site .site-ic{width:30px;height:30px;border-radius:9px;font-size:14px}.sites .site b{font-size:14px}
