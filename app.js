@@ -4,7 +4,7 @@ if (window.top !== window.self) { document.documentElement.classList.add('framed
 
 const $ = s => document.querySelector(s);
 const main = $('#main'), ov = $('#overlay');
-const APP_VERSION = 3;
+const APP_VERSION = 4;
 const slug = t => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const enc = t => encodeURIComponent(t);
 const SITES = [
@@ -12,10 +12,18 @@ const SITES = [
   {k:'tecoloco', n:'Tecoloco', c:'#F08A3C', url:q => `https://www.tecoloco.com.sv/empleos?Keywords=${enc(q)}`},
   {k:'linkedin', n:'LinkedIn', c:'#3E8FC7', url:q => `https://www.linkedin.com/jobs/search/?keywords=${enc(q)}&location=${enc('El Salvador')}`},
   {k:'jooble', n:'Jooble', c:'#5FBF7A', url:q => `https://sv.jooble.org/SearchResult?ukw=${enc(q)}`},
+  {k:'toptrabajos', n:'TopTrabajos', c:'#E86A7E', url:q => `https://www.toptrabajos.com/empleos?q=${enc(q).replace(/%20/g, '+')}&pais=sv`},
+  {k:'buscojobs', n:'BuscoJobs', c:'#C9A0E8', url:q => `https://www.buscojobs.com.sv/ofertas/${slug(q)}_`},
   {k:'facebook', n:'Facebook (recientes)', c:'#7B8FE8', url:q => `https://www.facebook.com/search/top?q=${enc(q)}&filters=eyJyZWNlbnRfcG9zdHM6MCI6IntcIm5hbWVcIjpcInJlY2VudF9wb3N0c1wiLFwiYXJnc1wiOlwiXCJ9In0%3D`}];
 const DEFAULT_LINKS = [
   {n:'Ministerio de Trabajo (Oportunidades)', u:'https://oportunidades.mtps.gob.sv/home'},
   {n:'INCAF (Oportunidades)', u:'https://www.incaf.gob.sv/oportunidades/'},
+  {n:'Tuchance (empleos permanentes)', u:'https://www.tuchance.org.sv/chances/empleos-permanentes'},
+  {n:'Cámara de Comercio (PROmuévete)', u:'https://app.camarasal.com/offers_available'},
+  {n:'Crecer con Empleo', u:'https://app.crecerconempleo.com'},
+  {n:'Mi Futuro Empleo', u:'https://sv.mifuturoempleo.com'},
+  {n:'Saplic', u:'https://saplic.com/sv/busqueda-ofertas-empleo'},
+  {n:'QuieroAplicar', u:'https://sv.quieroaplicar.com'},
   {n:'Grupo de Facebook 1', u:'https://www.facebook.com/groups/192469391268181/?sorting_setting=CHRONOLOGICAL'},
   {n:'Grupo de Facebook 2', u:'https://www.facebook.com/groups/483938870682421/?sorting_setting=CHRONOLOGICAL'},
   {n:'Grupo de Facebook 3', u:'https://www.facebook.com/groups/1651884641745913/?sorting_setting=CHRONOLOGICAL'},
@@ -50,7 +58,7 @@ function clean(j){ if (!j || !ID_RE.test(j.id)) return null; const title = str(j
   return {id:j.id, title, company:str(j.company, 100).trim(), url:safeUrl(j.url || ''), status:ST[j.status] ? j.status : 'saved', applied:DATE_RE.test(j.applied || '') ? j.applied : '', next:DATE_RE.test(j.next || '') ? j.next : '', nextNote:str(j.nextNote, 120), note:str(j.note, 2000), salary:str(j.salary, 60), created:+j.created || Date.now(), updated:+j.updated || Date.now()}; }
 let jobs = [], searches = [], links = DEFAULT_LINKS.map(l => Object.assign({}, l)), query = '', view = {name:'search'}, hist = [], tab = 'search', filter = 'active', draft = null, installEvt = null;
 async function saveJob(j){ j.updated = Date.now(); await DB.put('jobs', j); const k = jobs.findIndex(x => x.id === j.id); k < 0 ? jobs.push(j) : jobs[k] = j; }
-const saveLinks = () => DB.put('meta', {k:'links', v:links}).catch(() => {});
+const saveLinks = () => DB.put('meta', {k:'links', v:links, ver:4}).catch(() => {});
 const saveSearches = () => DB.put('meta', {k:'searches', v:searches}).catch(() => {});
 
 /* ---------- Superposiciones y botón atrás ---------- */
@@ -185,7 +193,9 @@ window.addEventListener('appinstalled', () => { installEvt = null; toast('Empleo
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js', {scope:'./'}).catch(() => {});
   if (!window.indexedDB || !await DB.open()){ main.innerHTML = '<div class="empty"><h2>No se puede guardar</h2><p>Este navegador no permite guardar datos. Si estás en modo incógnito, abre la app en una pestaña normal.</p></div>'; return; }
   try { jobs = (await DB.all('jobs')).map(clean).filter(Boolean); } catch(e){ jobs = []; }
-  try { const l = await DB.get('meta', 'links'); if (l && Array.isArray(l.v)) links = l.v.filter(x => x && typeof x.n === 'string' && safeUrl(x.u)).map(x => ({n:x.n.slice(0, 60), u:safeUrl(x.u)})).slice(0, 30); } catch(e){}
+  try { const l = await DB.get('meta', 'links'); if (l && Array.isArray(l.v)){ links = l.v.filter(x => x && typeof x.n === 'string' && safeUrl(x.u)).map(x => ({n:x.n.slice(0, 60), u:safeUrl(x.u)})).slice(0, 30);
+    // páginas nuevas de la versión 4: se suman a tus accesos directos sin tocar los que ya editaste
+    if ((l.ver || 1) < 4){ const known = new Set(links.map(x => x.u)); DEFAULT_LINKS.forEach(d => { if (!known.has(d.u)) links.push(Object.assign({}, d)); }); saveLinks(); } } } catch(e){}
   try { const s = await DB.get('meta', 'searches'); if (s && Array.isArray(s.v)) searches = s.v.filter(x => typeof x === 'string').slice(0, 12); } catch(e){}
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   history.replaceState({root:1}, '');
