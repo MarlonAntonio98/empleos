@@ -4,7 +4,7 @@ if (window.top !== window.self) { document.documentElement.classList.add('framed
 
 const $ = s => document.querySelector(s);
 const main = $('#main'), ov = $('#overlay');
-const APP_VERSION = 6;
+const APP_VERSION = 7;
 const slug = t => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const enc = t => encodeURIComponent(t);
 const SITES = [
@@ -24,6 +24,7 @@ const DEFAULT_LINKS = [
   {n:'Mi Futuro Empleo', u:'https://sv.mifuturoempleo.com'},
   {n:'Saplic', u:'https://saplic.com/sv/busqueda-ofertas-empleo'},
   {n:'QuieroAplicar', u:'https://sv.quieroaplicar.com'},
+  {n:'EduChamba SV', u:'https://www.facebook.com/EduChambasv'},
   {n:'Grupo de Facebook 1', u:'https://www.facebook.com/groups/192469391268181/?sorting_setting=CHRONOLOGICAL'},
   {n:'Grupo de Facebook 2', u:'https://www.facebook.com/groups/483938870682421/?sorting_setting=CHRONOLOGICAL'},
   {n:'Grupo de Facebook 3', u:'https://www.facebook.com/groups/1651884641745913/?sorting_setting=CHRONOLOGICAL'},
@@ -58,7 +59,7 @@ function clean(j){ if (!j || !ID_RE.test(j.id)) return null; const title = str(j
   return {id:j.id, title, company:str(j.company, 100).trim(), url:safeUrl(j.url || ''), status:ST[j.status] ? j.status : 'saved', applied:DATE_RE.test(j.applied || '') ? j.applied : '', next:DATE_RE.test(j.next || '') ? j.next : '', nextNote:str(j.nextNote, 120), note:str(j.note, 2000), salary:str(j.salary, 60), created:+j.created || Date.now(), updated:+j.updated || Date.now()}; }
 let jobs = [], searches = [], links = DEFAULT_LINKS.map(l => Object.assign({}, l)), query = '', view = {name:'search'}, hist = [], tab = 'search', filter = 'active', draft = null, installEvt = null;
 async function saveJob(j){ j.updated = Date.now(); await DB.put('jobs', j); const k = jobs.findIndex(x => x.id === j.id); k < 0 ? jobs.push(j) : jobs[k] = j; }
-const saveLinks = () => DB.put('meta', {k:'links', v:links, ver:5}).catch(() => {});
+const saveLinks = () => DB.put('meta', {k:'links', v:links, ver:6}).catch(() => {});
 const saveSearches = () => DB.put('meta', {k:'searches', v:searches}).catch(() => {});
 
 /* ---------- Superposiciones y botón atrás ---------- */
@@ -91,7 +92,7 @@ function searchDyn(){ const q = query.trim(); let h = '';
   const star = q && !searches.includes(q) ? `<button class="chip star" data-act="saveSearch">${ic('star',14)} Guardar «${esc(q)}»</button>` : '';
   if (chips || star) h += `<div class="chips saved">${star}${chips}</div>`;
   const tile = (href, c, n) => `<a class="site" href="${esc(href)}" target="_blank" rel="noopener noreferrer" data-c="${c}"><span class="site-ic">${esc(n.charAt(0).toUpperCase())}</span><b>${esc(n)}</b></a>`;
-  h += `<div class="sites all">${SITES.map(s => q ? tile(s.url(q), s.c, s.n) : `<button class="site off" data-site="${s.k}" data-c="${s.c}"><span class="site-ic">${esc(s.n.charAt(0))}</span><b>${esc(s.n)}</b></button>`).join('')}${links.map((l, i) => tile(l.u, /facebook\.com\/groups/.test(l.u) ? '#7B8FE8' : LINK_COLORS[i % LINK_COLORS.length], l.n)).join('')}</div>`;
+  h += `<div class="sites all">${SITES.map(s => q ? tile(s.url(q), s.c, s.n) : `<button class="site off" data-site="${s.k}" data-c="${s.c}"><span class="site-ic">${esc(s.n.charAt(0))}</span><b>${esc(s.n)}</b></button>`).join('')}${links.map((l, i) => tile(l.u, /facebook\.com/.test(l.u) ? '#7B8FE8' : LINK_COLORS[i % LINK_COLORS.length], l.n)).join('')}</div>`;
   return h + `<button class="link-btn edit-links" data-act="settings">Editar accesos directos</button>`; }
 
 function paintDyn(){ const d = $('#dyn'); if (d){ d.innerHTML = searchDyn(); paint(); } }
@@ -202,6 +203,7 @@ window.addEventListener('appinstalled', () => { installEvt = null; toast('Empleo
     // páginas nuevas de la versión 4: se suman a tus accesos directos sin tocar los que ya editaste
     const OLD = {'Ministerio de Trabajo (Oportunidades)':'Ministerio de Trabajo', 'INCAF (Oportunidades)':'INCAF', 'Tuchance (empleos permanentes)':'Tuchance', 'Cámara de Comercio (PROmuévete)':'Cámara de Comercio'};
     if ((l.ver || 1) < 5){ links.forEach(x => { if (OLD[x.n]) x.n = OLD[x.n]; }); saveLinks(); }
+    if ((l.ver || 1) < 6 && !links.some(x => /facebook\.com\/EduChambasv/i.test(x.u))){ links.push({n:'EduChamba SV', u:'https://www.facebook.com/EduChambasv'}); saveLinks(); }
     if ((l.ver || 1) < 4){ const known = new Set(links.map(x => x.u)); DEFAULT_LINKS.forEach(d => { if (!known.has(d.u)) links.push(Object.assign({}, d)); }); saveLinks(); } } } catch(e){}
   try { const s = await DB.get('meta', 'searches'); if (s && Array.isArray(s.v)) searches = s.v.filter(x => typeof x === 'string').slice(0, 12); } catch(e){}
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
